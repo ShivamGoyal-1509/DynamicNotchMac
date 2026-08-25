@@ -10,9 +10,9 @@
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎵 Apple Music
+### Apple Music
 
 DynamicNotch integrates with Apple Music and displays media controls directly below the MacBook notch.
 
@@ -30,7 +30,7 @@ The music interface appears when you hover over the notch while Apple Music is a
 
 ---
 
-### ⚡ Charging Status
+### Charging Status
 
 Connecting or disconnecting your MacBook charger triggers a temporary charging animation.
 
@@ -44,7 +44,7 @@ The charging interface automatically disappears after a short delay.
 
 ---
 
-### 📡 AirDrop
+### AirDrop
 
 Drag files directly onto the DynamicNotch area to quickly initiate AirDrop.
 
@@ -58,7 +58,7 @@ Multiple files are supported.
 
 ---
 
-### 🖱 Dynamic Interaction
+### Dynamic Interaction
 
 DynamicNotch normally stays hidden within the physical MacBook notch.
 
@@ -81,7 +81,7 @@ The interface automatically returns to its collapsed state after temporary activ
 
 ---
 
-## 🖥 Requirements
+## Requirements
 
 DynamicNotch is currently designed for:
 
@@ -96,7 +96,7 @@ The current development version targets **macOS 27**.
 
 ---
 
-## 🏗 Architecture
+## Architecture
 
 The project is intentionally divided by functionality to make adding new DynamicNotch activities straightforward.
 
@@ -158,7 +158,7 @@ enum IslandActivity: Equatable {
 
 ---
 
-## 🛠 Building From Source
+## Building From Source
 
 ### 1. Clone the repository
 
@@ -249,7 +249,7 @@ to run.
 
 ---
 
-## 🔐 Permissions
+## Permissions
 
 ### Apple Music
 
@@ -279,7 +279,7 @@ Recipient discovery and file transfer continue to be handled by macOS.
 
 ---
 
-## 🚀 Installing a Local Build
+## Installing a Local Build
 
 Create a Release archive from Xcode:
 
@@ -304,7 +304,7 @@ DynamicNotch can then run independently of Xcode.
 
 ---
 
-## 🎨 App Icon
+## App Icon
 
 The DynamicNotch application icon was created using Apple's **Icon Composer**.
 
@@ -316,26 +316,26 @@ DynamicNotch.icon
 
 ---
 
-## 🗺 Roadmap
+## Roadmap
 
 Potential future features include:
 
-- ☀️ Display brightness
-- 🎧 AirPods connection status
-- 🔋 Improved battery animations
-- 🔔 Notifications
-- ⏱ Timers
-- 🎙 Microphone activity
-- 📷 Camera activity
-- 🖥 Multi-display support
-- ⚙️ Settings interface
-- 🚀 Launch at Login
-- 🎛 Per-feature enable/disable controls
-- 🎨 Additional DynamicNotch themes
+- Display brightness
+- AirPods connection status
+- Improved battery animations
+- Notifications
+- Timers
+- Microphone activity
+- Camera activity
+- Multi-display support
+- Settings interface
+- Launch at Login
+- Per-feature enable/disable controls
+- Additional DynamicNotch themes
 
 ---
 
-## ⚠️ Project Status
+## Project Status
 
 DynamicNotch is currently **experimental / work in progress**.
 
@@ -345,7 +345,7 @@ The project currently targets a beta version of macOS, so behavior may change wi
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions, bug reports, and feature suggestions are welcome.
 
@@ -358,7 +358,7 @@ If you would like to contribute:
 
 ---
 
-## 📄 License
+## License
 
 A license has not yet been selected for this project.
 
