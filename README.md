@@ -1,4 +1,4 @@
-# # DynamicNotch
+# DynamicNotch
 
 <p align="center">
   <strong>Turn your MacBook's notch into a Dynamic Island.</strong>
