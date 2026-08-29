@@ -29,35 +29,33 @@ struct NotchIslandView: View {
     private var activity:
         IslandActivity = .idle
 
-
-    // Controls only the black -> Liquid Glass reveal.
     @State
     private var glassProgress:
         CGFloat = 0
-
 
     @State
     private var showContent =
         false
 
-
     @State
     private var dismissTask:
         Task<Void, Never>?
-
 
     @State
     private var hoverTimer:
         Timer?
 
-
     @State
     private var mouseInsideIsland =
         false
 
+    @State
+    private var chargingExpansion:
+        CGFloat = 0
+
 
     // ========================================================
-    // EXPANDED SIZES
+    // MUSIC SIZE
     // ========================================================
 
     private let musicWidth:
@@ -67,12 +65,31 @@ struct NotchIslandView: View {
         CGFloat = 145
 
 
-    private let chargingWidth:
-        CGFloat = 260
+    // ========================================================
+    // CHARGING WINGS
+    // ========================================================
 
-    private let chargingHeight:
-        CGFloat = 78
+    private let chargingLeftWingWidth:
+        CGFloat = 85
 
+    private let chargingRightWingWidth:
+        CGFloat = 54
+
+
+    private var chargingExpandedWidth:
+        CGFloat {
+
+        collapsedWidth
+            +
+            chargingLeftWingWidth
+            +
+            chargingRightWingWidth
+    }
+
+
+    // ========================================================
+    // AIRDROP SIZE
+    // ========================================================
 
     private let airDropWidth:
         CGFloat = 300
@@ -92,7 +109,6 @@ struct NotchIslandView: View {
             blendDuration: 0.07
         )
 
-
     private let collapseAnimation =
         Animation.spring(
             response: 0.30,
@@ -100,22 +116,33 @@ struct NotchIslandView: View {
             blendDuration: 0.05
         )
 
+    private let chargingExpandAnimation =
+        Animation.spring(
+            response: 0.30,
+            dampingFraction: 0.86,
+            blendDuration: 0.03
+        )
+
+    private let chargingCollapseAnimation =
+        Animation.spring(
+            response: 0.26,
+            dampingFraction: 0.92,
+            blendDuration: 0.03
+        )
 
     private let glassAnimation =
         Animation.easeInOut(
             duration: 0.20
         )
 
-
     private let contentInAnimation =
         Animation.easeOut(
-            duration: 0.11
+            duration: 0.10
         )
-
 
     private let contentOutAnimation =
         Animation.easeOut(
-            duration: 0.07
+            duration: 0.06
         )
 
 
@@ -132,32 +159,26 @@ struct NotchIslandView: View {
             ZStack {
 
                 // =================================================
-                // LIQUID GLASS BACKGROUND
+                // BACKGROUND
                 // =================================================
-                //
-                // IMPORTANT:
-                //
-                // GlassNotchBackground.swift is the ONLY place
-                // where .glassEffect(...) should be applied.
-                //
 
-                GlassNotchBackground(
-                    width:
-                        currentWidth,
+                if activity == .charging {
 
-                    height:
-                        currentHeight,
+                    chargingBackground
 
-                    cornerRadius:
-                        currentCornerRadius,
+                } else {
 
-                    progress:
-                        glassProgress
-                )
+                    GlassNotchBackground(
+                        width: currentWidth,
+                        height: currentHeight,
+                        cornerRadius: currentCornerRadius,
+                        progress: glassProgress
+                    )
+                }
 
 
                 // =================================================
-                // ACTIVITY CONTENT
+                // CONTENT
                 // =================================================
 
                 if showContent {
@@ -169,63 +190,44 @@ struct NotchIslandView: View {
                 }
             }
 
-
-            // =====================================================
-            // SIZE
-            // =====================================================
-
             .frame(
-                width:
-                    currentWidth,
-
-                height:
-                    currentHeight
+                width: currentWidth,
+                height: currentHeight
             )
-
-
-            // =====================================================
-            // GEOMETRY ANIMATION
-            // =====================================================
-            //
-            // This controls the physical shape expanding from
-            // and collapsing into the MacBook notch.
-            //
 
             .animation(
-                activity == .idle
-                ? collapseAnimation
-                : expandAnimation,
-
-                value:
-                    activity
+                activity == .charging
+                ? nil
+                : (
+                    activity == .idle
+                    ? collapseAnimation
+                    : expandAnimation
+                ),
+                value: activity
             )
-
-
-            // =====================================================
-            // SHADOW
-            // =====================================================
 
             .shadow(
                 color:
                     activity == .idle
+                    ||
+                    activity == .charging
                     ? .clear
                     : .black.opacity(0.24),
 
                 radius:
                     activity == .idle
+                    ||
+                    activity == .charging
                     ? 0
                     : 10,
 
                 y:
                     activity == .idle
+                    ||
+                    activity == .charging
                     ? 0
                     : 4
             )
-
-
-            // =====================================================
-            // AIRDROP
-            // =====================================================
 
             .onDrop(
                 of: [
@@ -236,17 +238,13 @@ struct NotchIslandView: View {
                     Binding(
 
                         get: {
-
-                            airDrop
-                                .isDraggingOverNotch
+                            airDrop.isDraggingOverNotch
                         },
 
                         set: { targeted in
 
-                            airDrop
-                                .isDraggingOverNotch =
+                            airDrop.isDraggingOverNotch =
                                 targeted
-
 
                             if targeted {
 
@@ -266,40 +264,22 @@ struct NotchIslandView: View {
                 )
             }
 
-
-            // =====================================================
-            // CHARGING
-            // =====================================================
-
             .onChange(
-                of:
-                    battery.changeToken
+                of: battery.changeToken
             ) { _, _ in
 
-                // AirDrop should not be interrupted.
                 guard
                     activity != .airDrop
                 else {
-
                     return
                 }
-
 
                 showCharging()
             }
 
-
-            // =====================================================
-            // MUSIC STATE
-            // =====================================================
-
             .onChange(
-                of:
-                    music.isPlaying
+                of: music.isPlaying
             ) { _, isPlaying in
-
-                // If Music gets paused or stopped while
-                // expanded, collapse back into the notch.
 
                 if !isPlaying,
                    activity == .music {
@@ -307,10 +287,8 @@ struct NotchIslandView: View {
                     dismissTask?
                         .cancel()
 
-
                     mouseInsideIsland =
                         false
-
 
                     collapseToIdle()
                 }
@@ -320,42 +298,20 @@ struct NotchIslandView: View {
             Spacer()
         }
 
-
-        // =========================================================
-        // FLOATING PANEL AREA
-        // =========================================================
-
         .frame(
-            maxWidth:
-                .infinity,
-
-            maxHeight:
-                .infinity,
-
-            alignment:
-                .top
+            maxWidth: .infinity,
+            maxHeight: .infinity,
+            alignment: .top
         )
 
-
-        // =========================================================
-        // START MOUSE MONITOR
-        // =========================================================
-
         .onAppear {
-
             startMouseMonitor()
         }
-
-
-        // =========================================================
-        // STOP MOUSE MONITOR
-        // =========================================================
 
         .onDisappear {
 
             hoverTimer?
                 .invalidate()
-
 
             hoverTimer =
                 nil
@@ -364,7 +320,31 @@ struct NotchIslandView: View {
 
 
     // ========================================================
-    // ACTIVITY CONTENT
+    // CHARGING BACKGROUND
+    // ========================================================
+
+    private var chargingBackground:
+        some View {
+
+        UnevenRoundedRectangle(
+            topLeadingRadius: 0,
+            bottomLeadingRadius: 8,
+            bottomTrailingRadius: 8,
+            topTrailingRadius: 0,
+            style: .continuous
+        )
+        .fill(
+            Color.black
+        )
+        .frame(
+            width: currentWidth,
+            height: collapsedHeight
+        )
+    }
+
+
+    // ========================================================
+    // CURRENT CONTENT
     // ========================================================
 
     @ViewBuilder
@@ -381,38 +361,33 @@ struct NotchIslandView: View {
         case .music:
 
             MusicView(
-                music:
-                    music
+                music: music
             )
 
 
         case .charging:
 
             ChargingView(
-                battery:
-                    battery
+                battery: battery,
+                notchWidth: collapsedWidth
             )
 
 
         case .airDrop:
 
             AirDropView(
-
                 fileCount:
-                    airDrop
-                        .droppedFiles
-                        .count,
+                    airDrop.droppedFiles.count,
 
                 isTargeted:
-                    airDrop
-                        .isDraggingOverNotch
+                    airDrop.isDraggingOverNotch
             )
         }
     }
 
 
     // ========================================================
-    // ACTUAL MACBOOK NOTCH WIDTH
+    // HARDWARE NOTCH WIDTH
     // ========================================================
 
     private var collapsedWidth:
@@ -421,10 +396,8 @@ struct NotchIslandView: View {
         guard let screen =
             targetScreen
         else {
-
             return 185
         }
-
 
         guard
             let left =
@@ -432,27 +405,23 @@ struct NotchIslandView: View {
 
             let right =
                 screen.auxiliaryTopRightArea
-
         else {
-
             return 185
         }
 
-
-        let width =
+        let value =
             right.minX
             -
             left.maxX
 
-
-        return width > 0
-            ? width
+        return value > 0
+            ? value
             : 185
     }
 
 
     // ========================================================
-    // ACTUAL MACBOOK NOTCH HEIGHT
+    // HARDWARE NOTCH HEIGHT
     // ========================================================
 
     private var collapsedHeight:
@@ -461,19 +430,14 @@ struct NotchIslandView: View {
         guard let screen =
             targetScreen
         else {
-
             return 32
         }
 
+        let value =
+            screen.safeAreaInsets.top
 
-        let height =
-            screen
-                .safeAreaInsets
-                .top
-
-
-        return height > 0
-            ? height
+        return value > 0
+            ? value
             : 32
     }
 
@@ -499,7 +463,15 @@ struct NotchIslandView: View {
 
         case .charging:
 
-            return chargingWidth
+            return collapsedWidth
+                +
+                (
+                    chargingExpandedWidth
+                    -
+                    collapsedWidth
+                )
+                *
+                chargingExpansion
 
 
         case .airDrop:
@@ -530,7 +502,7 @@ struct NotchIslandView: View {
 
         case .charging:
 
-            return chargingHeight
+            return collapsedHeight
 
 
         case .airDrop:
@@ -541,7 +513,7 @@ struct NotchIslandView: View {
 
 
     // ========================================================
-    // CURRENT CORNER RADIUS
+    // CORNER RADIUS
     // ========================================================
 
     private var currentCornerRadius:
@@ -561,7 +533,7 @@ struct NotchIslandView: View {
 
         case .charging:
 
-            return 20
+            return 8
 
 
         case .airDrop:
@@ -572,7 +544,7 @@ struct NotchIslandView: View {
 
 
     // ========================================================
-    // TARGET DISPLAY
+    // TARGET SCREEN
     // ========================================================
 
     private var targetScreen:
@@ -581,14 +553,12 @@ struct NotchIslandView: View {
         if let notchedScreen =
             NSScreen.screens.first(
                 where: {
-
                     $0.safeAreaInsets.top > 0
                 }
             ) {
 
             return notchedScreen
         }
-
 
         return NSScreen.main
     }
@@ -603,41 +573,27 @@ struct NotchIslandView: View {
         hoverTimer?
             .invalidate()
 
-
         hoverTimer =
             Timer.scheduledTimer(
-
-                withTimeInterval:
-                    0.06,
-
-                repeats:
-                    true
-
+                withTimeInterval: 0.06,
+                repeats: true
             ) { _ in
 
                 Task { @MainActor in
-
                     checkMousePosition()
                 }
             }
     }
 
 
-    // ========================================================
-    // CHECK MOUSE POSITION
-    // ========================================================
-
     private func checkMousePosition() {
 
         guard let screen =
             targetScreen
         else {
-
             return
         }
 
-
-        // Charging and AirDrop control themselves.
         switch activity {
 
         case .charging,
@@ -645,17 +601,11 @@ struct NotchIslandView: View {
 
             return
 
-
         case .idle,
              .music:
 
             break
         }
-
-
-        // ====================================================
-        // MUSIC ONLY RESPONDS WHILE PLAYING
-        // ====================================================
 
         guard
             music.isPlaying
@@ -664,56 +614,28 @@ struct NotchIslandView: View {
             mouseInsideIsland =
                 false
 
-
             if activity == .music {
-
                 collapseToIdle()
             }
-
 
             return
         }
 
-
         let mouse =
             NSEvent.mouseLocation
 
+        let hitWidth =
+            activity == .music
+            ? musicWidth
+            : collapsedWidth
 
-        let hitWidth:
-            CGFloat
-
-
-        let hitHeight:
-            CGFloat
-
-
-        if activity == .music {
-
-            // Full expanded player remains interactive.
-
-            hitWidth =
-                musicWidth
-
-
-            hitHeight =
-                musicHeight
-
-        } else {
-
-            // Collapsed state uses only the hardware notch.
-
-            hitWidth =
-                collapsedWidth
-
-
-            hitHeight =
-                collapsedHeight
-        }
-
+        let hitHeight =
+            activity == .music
+            ? musicHeight
+            : collapsedHeight
 
         let rect =
             NSRect(
-
                 x:
                     screen.frame.midX
                     -
@@ -731,38 +653,29 @@ struct NotchIslandView: View {
                     hitHeight
             )
 
-
         let inside =
             rect.contains(
                 mouse
             )
 
-
         guard
-            inside
-            !=
-            mouseInsideIsland
+            inside != mouseInsideIsland
         else {
-
             return
         }
-
 
         mouseInsideIsland =
             inside
 
-
         if inside {
 
             if activity == .idle {
-
                 showMusic()
             }
 
         } else {
 
             if activity == .music {
-
                 hideMusicAfterDelay()
             }
         }
@@ -770,7 +683,7 @@ struct NotchIslandView: View {
 
 
     // ========================================================
-    // SHOW ACTIVITY
+    // STANDARD ACTIVITY
     // ========================================================
 
     private func showActivity(
@@ -781,15 +694,8 @@ struct NotchIslandView: View {
         dismissTask?
             .cancel()
 
-
-        // Start fully black.
         glassProgress =
             0
-
-
-        // ====================================================
-        // 1. EXPAND FROM PHYSICAL NOTCH
-        // ====================================================
 
         withAnimation(
             expandAnimation
@@ -799,40 +705,30 @@ struct NotchIslandView: View {
                 newActivity
         }
 
+        if newActivity != .charging {
 
-        // ====================================================
-        // 2. REVEAL LIQUID GLASS
-        // ====================================================
+            Task { @MainActor in
 
-        Task { @MainActor in
+                try? await Task.sleep(
+                    for:
+                        .milliseconds(25)
+                )
 
-            try? await Task.sleep(
-                for:
-                    .milliseconds(25)
-            )
+                guard
+                    activity == newActivity
+                else {
+                    return
+                }
 
+                withAnimation(
+                    glassAnimation
+                ) {
 
-            guard
-                activity == newActivity
-            else {
-
-                return
-            }
-
-
-            withAnimation(
-                glassAnimation
-            ) {
-
-                glassProgress =
-                    1
+                    glassProgress =
+                        1
+                }
             }
         }
-
-
-        // ====================================================
-        // 3. SHOW CONTENT
-        // ====================================================
 
         Task { @MainActor in
 
@@ -841,14 +737,11 @@ struct NotchIslandView: View {
                     .milliseconds(65)
             )
 
-
             guard
                 activity == newActivity
             else {
-
                 return
             }
-
 
             withAnimation(
                 contentInAnimation
@@ -870,10 +763,8 @@ struct NotchIslandView: View {
         guard
             music.isPlaying
         else {
-
             return
         }
-
 
         showActivity(
             .music
@@ -886,7 +777,6 @@ struct NotchIslandView: View {
         dismissTask?
             .cancel()
 
-
         dismissTask =
             Task {
 
@@ -895,14 +785,11 @@ struct NotchIslandView: View {
                         .milliseconds(120)
                 )
 
-
                 guard
                     !Task.isCancelled
                 else {
-
                     return
                 }
-
 
                 await MainActor.run {
 
@@ -910,10 +797,8 @@ struct NotchIslandView: View {
                         activity == .music,
                         !mouseInsideIsland
                     else {
-
                         return
                     }
-
 
                     collapseToIdle()
                 }
@@ -927,15 +812,136 @@ struct NotchIslandView: View {
 
     private func showCharging() {
 
-        showActivity(
+        dismissTask?
+            .cancel()
+
+        showContent =
+            false
+
+        chargingExpansion =
+            0
+
+        activity =
             .charging
-        )
 
 
-        dismissTemporaryActivity(
-            after:
-                2000
-        )
+        // ====================================================
+        // EXPAND WIDTH ONLY
+        // ====================================================
+
+        withAnimation(
+            chargingExpandAnimation
+        ) {
+
+            chargingExpansion =
+                1
+        }
+
+
+        // ====================================================
+        // SHOW CONTENT
+        // ====================================================
+
+        Task { @MainActor in
+
+            try? await Task.sleep(
+                for:
+                    .milliseconds(100)
+            )
+
+            guard
+                activity == .charging
+            else {
+                return
+            }
+
+            withAnimation(
+                contentInAnimation
+            ) {
+
+                showContent =
+                    true
+            }
+        }
+
+
+        // ====================================================
+        // HOLD
+        // ====================================================
+
+        dismissTask =
+            Task {
+
+                try? await Task.sleep(
+                    for:
+                        .milliseconds(1700)
+                )
+
+                guard
+                    !Task.isCancelled
+                else {
+                    return
+                }
+
+                await MainActor.run {
+                    hideCharging()
+                }
+            }
+    }
+
+
+    // ========================================================
+    // HIDE CHARGING
+    // ========================================================
+
+    private func hideCharging() {
+
+        guard
+            activity == .charging
+        else {
+            return
+        }
+
+        withAnimation(
+            contentOutAnimation
+        ) {
+
+            showContent =
+                false
+        }
+
+        Task { @MainActor in
+
+            try? await Task.sleep(
+                for:
+                    .milliseconds(45)
+            )
+
+            withAnimation(
+                chargingCollapseAnimation
+            ) {
+
+                chargingExpansion =
+                    0
+            }
+
+            try? await Task.sleep(
+                for:
+                    .milliseconds(260)
+            )
+
+            guard
+                chargingExpansion <= 0.01
+            else {
+                return
+            }
+
+            activity =
+                .idle
+
+            showContent =
+                false
+        }
     }
 
 
@@ -957,13 +963,15 @@ struct NotchIslandView: View {
 
     private func collapseToIdle() {
 
+        if activity == .charging {
+
+            hideCharging()
+
+            return
+        }
+
         dismissTask?
             .cancel()
-
-
-        // ====================================================
-        // 1. CONTENT OUT
-        // ====================================================
 
         withAnimation(
             contentOutAnimation
@@ -973,18 +981,12 @@ struct NotchIslandView: View {
                 false
         }
 
-
-        // ====================================================
-        // 2. GLASS RETURNS TO BLACK
-        // ====================================================
-
         Task { @MainActor in
 
             try? await Task.sleep(
                 for:
                     .milliseconds(15)
             )
-
 
             withAnimation(
                 glassAnimation
@@ -995,18 +997,12 @@ struct NotchIslandView: View {
             }
         }
 
-
-        // ====================================================
-        // 3. COLLAPSE INTO HARDWARE NOTCH
-        // ====================================================
-
         Task { @MainActor in
 
             try? await Task.sleep(
                 for:
                     .milliseconds(40)
             )
-
 
             withAnimation(
                 collapseAnimation
@@ -1020,7 +1016,7 @@ struct NotchIslandView: View {
 
 
     // ========================================================
-    // HANDLE AIRDROP FILES
+    // AIRDROP FILE HANDLING
     // ========================================================
 
     private func handleDroppedFiles(
@@ -1036,59 +1032,45 @@ struct NotchIslandView: View {
                 )
             }
 
-
         guard
             !supported.isEmpty
         else {
-
             return false
         }
-
 
         let lock =
             NSLock()
 
-
         var urls:
             [URL] = []
-
 
         let group =
             DispatchGroup()
 
-
-        for provider in
-            supported {
+        for provider in supported {
 
             group.enter()
 
-
             provider.loadItem(
-
                 forTypeIdentifier:
                     UTType.fileURL.identifier,
 
                 options:
                     nil
-
             ) { item, _ in
 
                 defer {
-
                     group.leave()
                 }
 
-
                 var discoveredURL:
                     URL?
-
 
                 if let data =
                     item as? Data {
 
                     discoveredURL =
                         URL(
-
                             dataRepresentation:
                                 data,
 
@@ -1096,13 +1078,11 @@ struct NotchIslandView: View {
                                 nil
                         )
 
-
                 } else if let url =
                     item as? URL {
 
                     discoveredURL =
                         url
-
 
                 } else if let nsURL =
                     item as? NSURL {
@@ -1111,26 +1091,21 @@ struct NotchIslandView: View {
                         nsURL as URL
                 }
 
-
                 if let discoveredURL {
 
                     lock.lock()
 
-
                     urls.append(
                         discoveredURL
                     )
-
 
                     lock.unlock()
                 }
             }
         }
 
-
         group.notify(
-            queue:
-                .main
+            queue: .main
         ) {
 
             guard
@@ -1142,27 +1117,18 @@ struct NotchIslandView: View {
                 return
             }
 
-
-            airDrop
-                .droppedFiles =
+            airDrop.droppedFiles =
                 urls
 
+            airDrop.sendViaAirDrop(
+                urls: urls
+            )
 
-            airDrop
-                .sendViaAirDrop(
-                    urls:
-                        urls
-                )
-
-
-            airDrop
-                .isDraggingOverNotch =
+            airDrop.isDraggingOverNotch =
                 false
-
 
             restoreAfterTemporaryActivity()
         }
-
 
         return true
     }
@@ -1177,13 +1143,12 @@ struct NotchIslandView: View {
         mouseInsideIsland =
             false
 
-
         collapseToIdle()
     }
 
 
     // ========================================================
-    // TEMPORARY ACTIVITY DISMISSAL
+    // TEMPORARY DISMISS
     // ========================================================
 
     private func dismissTemporaryActivity(
@@ -1196,22 +1161,16 @@ struct NotchIslandView: View {
 
                 try? await Task.sleep(
                     for:
-                        .milliseconds(
-                            milliseconds
-                        )
+                        .milliseconds(milliseconds)
                 )
-
 
                 guard
                     !Task.isCancelled
                 else {
-
                     return
                 }
 
-
                 await MainActor.run {
-
                     restoreAfterTemporaryActivity()
                 }
             }
